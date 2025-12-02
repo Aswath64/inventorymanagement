@@ -1,0 +1,32 @@
+package com.inventory.dto;
+
+import com.inventory.entity.User;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+
+@Data
+public class UpdateUserRequest {
+
+    @NotBlank(message = "Name is required")
+    private String name;
+
+    @NotBlank(message = "Email is required")
+    @Email(message = "Invalid email format")
+    private String email;
+
+    private String password;
+
+    @NotNull(message = "Role is required")
+    private User.Role role;
+
+    private String phone;
+    private String address;
+    private String avatarUrl;
+    private String themePreference = "light";
+    private Boolean emailNotifications = true;
+    private Boolean pushNotifications = false;
+    private Boolean enabled = true;
+}
+
