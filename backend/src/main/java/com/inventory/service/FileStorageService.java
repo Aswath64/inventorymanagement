@@ -78,5 +78,79 @@ public class FileStorageService {
                     });
         }
     }
+    
+    /**
+     * Save user avatar image
+     * Similar to saveProductImages but for single avatar file
+     * @param userId - User ID
+     * @param file - Avatar image file
+     * @return Image URL
+     * @throws IOException
+     */
+    public String saveAvatarImage(Long userId, MultipartFile file) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Avatar file is required");
+        }
+        
+        // Get parent directory of product-images (uploads/)
+        Path uploadBasePath = Paths.get(uploadDir).getParent();
+        if (uploadBasePath == null) {
+            uploadBasePath = Paths.get(uploadDir);
+        }
+        
+        // Create avatars directory (e.g. uploads/avatars/{userId})
+        Path avatarDir = uploadBasePath.resolve("avatars").resolve(userId.toString());
+        Files.createDirectories(avatarDir);
+        
+        // Generate filename with extension
+        String originalFilename = file.getOriginalFilename();
+        String extension = originalFilename != null && originalFilename.contains(".") 
+            ? originalFilename.substring(originalFilename.lastIndexOf(".")) 
+            : ".jpg";
+        String filename = "avatar" + extension;
+        
+        // Delete old avatar if exists (delete all files in avatar directory)
+        if (Files.exists(avatarDir)) {
+            try {
+                Files.walk(avatarDir)
+                    .filter(Files::isRegularFile)
+                    .forEach(path -> {
+                        try {
+                            Files.delete(path);
+                        } catch (IOException e) {
+                            // Ignore if file doesn't exist
+                        }
+                    });
+            } catch (IOException e) {
+                // Continue if cleanup fails
+            }
+        }
+        
+        // Save new avatar
+        Path targetLocation = avatarDir.resolve(filename);
+        Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+        
+        // Return relative URL: /api/images/avatars/{userId}/avatar.{ext}
+        return "/api/images/avatars/" + userId + "/" + filename;
+    }
+    
+    public void deleteAvatarImage(Long userId) throws IOException {
+        Path uploadBasePath = Paths.get(uploadDir).getParent();
+        if (uploadBasePath == null) {
+            uploadBasePath = Paths.get(uploadDir);
+        }
+        Path avatarDir = uploadBasePath.resolve("avatars").resolve(userId.toString());
+        if (Files.exists(avatarDir)) {
+            Files.walk(avatarDir)
+                    .sorted((a, b) -> b.compareTo(a))
+                    .forEach(path -> {
+                        try {
+                            Files.delete(path);
+                        } catch (IOException e) {
+                            throw new RuntimeException("Failed to delete avatar: " + path, e);
+                        }
+                    });
+        }
+    }
 }
 

@@ -8,6 +8,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class ProfileService {
@@ -47,6 +48,11 @@ public class ProfileService {
         user.setEmail(request.getEmail());
         user.setPhone(request.getPhone());
         user.setAddress(request.getAddress());
+        
+        // Update avatar URL if provided
+        if (request.getAvatarUrl() != null && !request.getAvatarUrl().trim().isEmpty()) {
+            user.setAvatarUrl(request.getAvatarUrl());
+        }
 
         user = userRepository.save(user);
         return new ProfileResponse(toDto(user), toSettings(user));
@@ -103,6 +109,27 @@ public class ProfileService {
                 user.getEmailNotifications(),
                 user.getPushNotifications()
         );
+    }
+    
+    /**
+     * Upload avatar image - similar to product image upload
+     */
+    @Transactional
+    public ProfileResponse uploadAvatar(MultipartFile file, FileStorageService fileStorageService) {
+        User user = getCurrentUser();
+        
+        try {
+            // Save avatar file and get URL
+            String avatarUrl = fileStorageService.saveAvatarImage(user.getId(), file);
+            
+            // Update user's avatar URL
+            user.setAvatarUrl(avatarUrl);
+            user = userRepository.save(user);
+            
+            return new ProfileResponse(toDto(user), toSettings(user));
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to save avatar: " + e.getMessage(), e);
+        }
     }
 }
 

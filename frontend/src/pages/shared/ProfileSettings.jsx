@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { getProfile, updateProfile, changePassword, updateSettings } from '../../services/profileService';
+import { getProfile, updateProfile, changePassword, updateSettings, uploadProfilePicture } from '../../services/profileService';
 import AnimatedCard from '../../components/motion/AnimatedCard';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
+import ProfilePictureUpload from '../../components/ProfilePictureUpload';
 
 const sectionVariants = {
   hidden: { opacity: 0, y: 30 },
@@ -15,7 +17,9 @@ export default function ProfileSettings() {
   const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '' });
   const [settingsData, setSettingsData] = useState({ themePreference: 'light', emailNotifications: true, pushNotifications: false });
   const [message, setMessage] = useState('');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const { setTheme } = useTheme();
+  const addToast = useToast();
 
   useEffect(() => {
     loadProfile();
@@ -76,8 +80,77 @@ export default function ProfileSettings() {
         setTheme(data.themePreference);
       }
       setMessage('Settings saved');
+      addToast({ type: 'success', message: 'Settings saved successfully!' });
     } catch (error) {
       setMessage(error.response?.data?.message || 'Failed to update settings');
+      addToast({ type: 'error', message: 'Failed to update settings' });
+    }
+  };
+
+  const handleAvatarUpload = async (file) => {
+    setUploadingAvatar(true);
+    try {
+      const response = await uploadProfilePicture(file);
+      
+      // Update profile state immediately with new avatar URL from response
+      if (response?.user) {
+        // Get the base URL without any existing query parameters
+        const baseUrl = response.user.avatarUrl?.split('?')[0] || response.user.avatarUrl;
+        // Add cache-busting timestamp - use a unique timestamp
+        const timestamp = Date.now();
+        const newAvatarUrl = baseUrl 
+          ? `${baseUrl}?v=${timestamp}`
+          : response.user.avatarUrl;
+        
+        // Update profile state immediately - create new object to force React update
+        const updatedProfile = {
+          ...response.user,
+          avatarUrl: newAvatarUrl,
+          _updated: timestamp // Add a flag to force re-render
+        };
+        
+        // Force state update
+        setProfile({ ...updatedProfile });
+        
+        // Also update formData to keep everything in sync
+        setFormData(prev => ({
+          ...prev,
+          name: updatedProfile.name,
+          email: updatedProfile.email,
+          phone: updatedProfile.phone || '',
+          address: updatedProfile.address || ''
+        }));
+      }
+      
+      // Reload full profile after a brief delay to ensure server has processed
+      setTimeout(async () => {
+        try {
+          const freshData = await getProfile();
+          if (freshData?.user) {
+            const freshBaseUrl = freshData.user.avatarUrl?.split('?')[0] || freshData.user.avatarUrl;
+            const freshTimestamp = Date.now();
+            const freshAvatarUrl = freshBaseUrl 
+              ? `${freshBaseUrl}?v=${freshTimestamp}`
+              : freshData.user.avatarUrl;
+            
+            // Force update with new timestamp
+            setProfile({
+              ...freshData.user,
+              avatarUrl: freshAvatarUrl,
+              _updated: freshTimestamp
+            });
+          }
+        } catch (error) {
+          console.error('Failed to reload profile:', error);
+        }
+      }, 800);
+      
+      addToast({ type: 'success', message: 'Profile picture updated! 🎉' });
+    } catch (error) {
+      console.error('Failed to upload avatar:', error);
+      addToast({ type: 'error', message: error.response?.data?.message || 'Failed to upload profile picture' });
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
@@ -88,32 +161,36 @@ export default function ProfileSettings() {
   return (
     <div className="container mx-auto p-6 space-y-8">
       <motion.div
-        className="flex flex-col gap-4 md:flex-row md:items-center"
+        key={`profile-header-${profile.avatarUrl}`} // Force re-render when avatar changes
+        className="flex flex-col gap-6 md:flex-row md:items-center"
         initial="hidden"
         animate="visible"
         variants={sectionVariants}
       >
-        <motion.img
-          src={profile.avatarUrl || `https://ui-avatars.com/api/?background=random&name=${profile.name}`}
-          alt={profile.name}
-          className="w-28 h-28 rounded-3xl object-cover shadow-2xl border-4 border-white/60"
-          whileHover={{ scale: 1.05 }}
-          transition={{ type: 'spring', stiffness: 150 }}
+        {/* Editable Profile Picture */}
+        <ProfilePictureUpload
+          currentAvatarUrl={profile.avatarUrl}
+          userName={profile.name}
+          onUpload={handleAvatarUpload}
+          loading={uploadingAvatar}
         />
         <div>
-          <p className="text-sm uppercase tracking-wide text-slate-500">Hello again</p>
-          <h1 className="text-4xl font-bold">{profile.name}</h1>
-          <p className="text-slate-500">{profile.email}</p>
+          <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Hello again</p>
+          <h1 className="text-4xl font-bold text-slate-900 dark:text-white font-heading mb-1">{profile.name}</h1>
+          <p className="text-slate-600 dark:text-slate-400">{profile.email}</p>
         </div>
       </motion.div>
 
       {message && (
         <motion.div
-          className="glass-panel p-4 rounded-xl text-sm"
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
+          className="glass-panel p-4 rounded-2xl text-sm border-2 border-cartoon-green-200 dark:border-cartoon-green-800 bg-cartoon-green-50 dark:bg-cartoon-green-900/20"
+          initial={{ opacity: 0, scale: 0.95, y: -10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95 }}
         >
-          {message}
+          <div className="flex items-center gap-2">
+            <span className="text-cartoon-green-700 dark:text-cartoon-green-300 font-medium">{message}</span>
+          </div>
         </motion.div>
       )}
 
@@ -133,9 +210,14 @@ export default function ProfileSettings() {
                 />
               </div>
             ))}
-            <button className="w-full rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 py-2 text-white shadow-lg hover:shadow-indigo-500/30 transition-shadow">
+            <motion.button
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              type="submit"
+              className="w-full rounded-2xl bg-gradient-to-r from-cartoon-blue-500 to-cartoon-purple-500 py-3 text-white font-bold shadow-sticker-lg hover:shadow-floating transition-all"
+            >
               Save Profile
-            </button>
+            </motion.button>
           </form>
         </AnimatedCard>
 
@@ -162,9 +244,14 @@ export default function ProfileSettings() {
                 required
               />
             </div>
-            <button className="w-full rounded-xl border border-slate-200/80 py-2 text-slate-800 hover:bg-slate-50">
+            <motion.button
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              type="submit"
+              className="w-full rounded-2xl border-2 border-slate-300 dark:border-slate-600 py-3 text-slate-800 dark:text-slate-200 font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sticker"
+            >
               Update Password
-            </button>
+            </motion.button>
           </form>
         </AnimatedCard>
       </div>
@@ -205,9 +292,14 @@ export default function ProfileSettings() {
             />
             Push Notifications
           </label>
-          <button className="rounded-xl bg-slate-900 text-white px-6 py-2 shadow-lg hover:shadow-slate-900/40">
+          <motion.button
+            whileHover={{ scale: 1.02, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            type="submit"
+            className="rounded-2xl bg-gradient-to-r from-slate-800 to-slate-900 dark:from-slate-700 dark:to-slate-800 text-white px-6 py-3 font-bold shadow-sticker-lg hover:shadow-floating transition-all"
+          >
             Save Preferences
-          </button>
+          </motion.button>
         </form>
       </AnimatedCard>
     </div>

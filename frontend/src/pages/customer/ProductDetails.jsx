@@ -5,6 +5,8 @@ import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { ProductDetailsSkeleton } from '../../components/skeletons/ProductSkeletons';
+import ProductImageCarousel from '../../components/product/ProductImageCarousel';
+import soundManager from '../../utils/soundUtils';
 
 export default function ProductDetails() {
   const { id } = useParams();
@@ -12,7 +14,6 @@ export default function ProductDetails() {
   const addToast = useToast();
   const [product, setProduct] = useState(null);
   const [reviews, setReviews] = useState([]);
-  const [currentImage, setCurrentImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
@@ -60,8 +61,10 @@ export default function ProductDetails() {
   const handleAddToCart = async () => {
     try {
       await api.post('/customer/cart/add', { productId: id, quantity });
-      addToast({ type: 'success', message: 'Added to cart' });
+      soundManager.playSuccess();
+      addToast({ type: 'success', message: 'Added to cart! 🎉' });
     } catch (error) {
+      soundManager.playError();
       addToast({ type: 'error', message: 'Failed to add to cart' });
     }
   };
@@ -69,8 +72,10 @@ export default function ProductDetails() {
   const handleAddToWishlist = async () => {
     try {
       await api.post(`/customer/wishlist/add/${id}`);
-      addToast({ type: 'success', message: 'Added to wishlist' });
+      soundManager.playSuccess();
+      addToast({ type: 'success', message: 'Added to wishlist! ❤️' });
     } catch (error) {
+      soundManager.playError();
       addToast({ type: 'error', message: 'Failed to add to wishlist' });
     }
   };
@@ -81,36 +86,14 @@ export default function ProductDetails() {
     <div className="space-y-10 p-6">
       <div className="grid gap-8 md:grid-cols-2">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-          <motion.img
-            src={product.imageUrls?.[currentImage] || '/placeholder.png'}
-            alt={product.name}
-            className="h-96 w-full rounded-3xl object-cover shadow-2xl"
-            key={currentImage}
-            initial={{ opacity: 0.8, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            onError={(e) => {
-              e.target.src = '/placeholder.png';
-              e.target.onerror = null;
-            }}
+          <ProductImageCarousel
+            images={product.imageUrls || []}
+            productName={product.name}
+            autoRotate={true}
+            rotationInterval={2000}
+            aspectRatio="4/3"
+            className="shadow-2xl"
           />
-          {product.imageUrls?.length > 1 && (
-            <div className="mt-4 flex gap-2 overflow-x-auto">
-              {product.imageUrls.map((url, idx) => (
-                  <motion.img
-                    key={idx}
-                    src={url}
-                    alt={`${product.name} ${idx + 1}`}
-                    onClick={() => setCurrentImage(idx)}
-                    className={`h-20 w-20 cursor-pointer rounded-2xl object-cover ${currentImage === idx ? 'ring-2 ring-blue-500' : ''}`}
-                    whileHover={{ scale: 1.05 }}
-                    onError={(e) => {
-                      e.target.src = '/placeholder.png';
-                      e.target.onerror = null;
-                    }}
-                  />
-              ))}
-            </div>
-          )}
         </motion.div>
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4 rounded-3xl bg-white/80 p-6 shadow-xl">
           <h1 className="text-4xl font-bold">{product.name}</h1>
@@ -153,10 +136,20 @@ export default function ProductDetails() {
                 />
               </div>
               <div className="flex flex-wrap gap-4">
-                <motion.button whileTap={{ scale: 0.97 }} onClick={handleAddToCart} className="flex-1 rounded-2xl bg-blue-600 px-6 py-2 text-white shadow-lg">
+                <motion.button 
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleAddToCart} 
+                  className="flex-1 rounded-2xl bg-gradient-to-r from-cartoon-blue-500 to-cartoon-blue-600 px-6 py-3 text-white font-bold shadow-sticker-lg hover:shadow-floating transition-all"
+                >
                   Add to Cart
                 </motion.button>
-                <motion.button whileTap={{ scale: 0.97 }} onClick={handleAddToWishlist} className="flex-1 rounded-2xl bg-emerald-500 px-6 py-2 text-white shadow-lg">
+                <motion.button 
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleAddToWishlist} 
+                  className="flex-1 rounded-2xl bg-gradient-to-r from-cartoon-green-500 to-cartoon-green-600 px-6 py-3 text-white font-bold shadow-sticker-lg hover:shadow-floating transition-all"
+                >
                   Add to Wishlist
                 </motion.button>
               </div>

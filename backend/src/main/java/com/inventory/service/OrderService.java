@@ -25,11 +25,12 @@ public class OrderService {
     private final UserRepository userRepository;
     private final NotificationRepository notificationRepository;
     private final EmailService emailService;
+    private final NotificationService notificationService;
     
     public OrderService(OrderRepository orderRepository, OrderItemRepository orderItemRepository,
                        CartRepository cartRepository, ProductRepository productRepository,
                        UserRepository userRepository, NotificationRepository notificationRepository,
-                       EmailService emailService) {
+                       EmailService emailService, NotificationService notificationService) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.cartRepository = cartRepository;
@@ -37,6 +38,7 @@ public class OrderService {
         this.userRepository = userRepository;
         this.notificationRepository = notificationRepository;
         this.emailService = emailService;
+        this.notificationService = notificationService;
     }
     
     private User getCurrentUser() {
@@ -85,6 +87,9 @@ public class OrderService {
             // Update product stock
             product.setStock(product.getStock() - cartItem.getQuantity());
             productRepository.save(product);
+            
+            // Check for low stock and notify admin/staff
+            notificationService.checkAndNotifyLowStock(product);
             
             // Calculate subtotal
             BigDecimal subtotal = product.getPrice().multiply(BigDecimal.valueOf(cartItem.getQuantity()));

@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
@@ -28,35 +28,8 @@ import StaffDashboard from './pages/staff/Dashboard';
 import StaffOrderManagement from './pages/staff/OrderManagement';
 import StaffReports from './pages/staff/Reports';
 
-import Navbar from './components/Navbar';
 import MotionWrapper from './components/motion/MotionWrapper';
-
-
-// -------------------- PAGE ANIMATION VARIANTS --------------------
-const pageVariants = {
-  initial: { opacity: 0, y: 10 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.3 } },
-  exit: { opacity: 0, y: -10, transition: { duration: 0.2 } },
-};
-
-
-// -------------------- PAGE WRAPPER --------------------
-const PageShell = ({ children }) => (
-  <>
-    <Navbar />
-    <motion.main
-      variants={pageVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      className="min-h-[calc(100vh-80px)] bg-gradient-to-b from-white/60 to-white/20 
-      dark:from-slate-900 dark:to-slate-900/80"
-    >
-      {children}
-    </motion.main>
-  </>
-);
-
+import DashboardLayout from './layouts/DashboardLayout';
 
 // -------------------- PRIVATE ROUTE HANDLER --------------------
 const PrivateRoute = ({ children, requiredRole }) => {
@@ -64,8 +37,8 @@ const PrivateRoute = ({ children, requiredRole }) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        Loading...
+      <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900">
+        <div className="w-12 h-12 border-4 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -74,19 +47,28 @@ const PrivateRoute = ({ children, requiredRole }) => {
     return <Navigate to="/login" />;
   }
 
+  const getHomeRoute = (role) => {
+    switch (role) {
+      case 'ADMIN': return '/admin/dashboard';
+      case 'STAFF': return '/staff/dashboard';
+      case 'CUSTOMER': return '/';
+      default: return '/login';
+    }
+  };
+
   if (requiredRole) {
     if (requiredRole === 'ADMIN' && user.role !== 'ADMIN') {
-      return <Navigate to="/" />;
+      return <Navigate to={getHomeRoute(user.role)} replace />;
     }
     if (requiredRole === 'STAFF' && user.role !== 'STAFF' && user.role !== 'ADMIN') {
-      return <Navigate to="/" />;
+      return <Navigate to={getHomeRoute(user.role)} replace />;
     }
     if (requiredRole === 'CUSTOMER' && user.role !== 'CUSTOMER') {
-      return <Navigate to="/" />;
+      return <Navigate to={getHomeRoute(user.role)} replace />;
     }
   }
 
-  return <PageShell>{children}</PageShell>;
+  return <DashboardLayout>{children}</DashboardLayout>;
 };
 
 
@@ -104,9 +86,13 @@ function AppRoutes() {
         <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to="/" />} />
         <Route path="/forgot-password" element={!isAuthenticated ? <ForgotPassword /> : <Navigate to="/" />} />
 
-        {/* Public Routes */}
-        <Route path="/products" element={<PageShell><ProductList /></PageShell>} />
-        <Route path="/products/:id" element={<PageShell><ProductDetails /></PageShell>} />
+        {/* Public Routes (wrapped in DashboardLayout via manual usage if needed, or consistent wrapper) */}
+        {/* Note: Public routes like Products also use DashboardLayout via PrivateRoute check?? 
+            Wait, ProductList is listed as Public in original App.jsx but passed into PageShell.
+            Here we should wrap them if they are public. 
+        */}
+        <Route path="/products" element={<DashboardLayout><ProductList /></DashboardLayout>} />
+        <Route path="/products/:id" element={<DashboardLayout><ProductDetails /></DashboardLayout>} />
 
         {/* Customer Routes */}
         <Route
@@ -244,18 +230,24 @@ function AppRoutes() {
 }
 
 
+import { MascotProvider } from './context/MascotContext';
+import FloatingBoxy from './components/Mascot/FloatingBoxy';
+
 // -------------------- MAIN APP --------------------
 function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <ToastProvider>
-          <MotionWrapper>
-            <Router>
-              <AppRoutes />
-            </Router>
-          </MotionWrapper>
-        </ToastProvider>
+        <MascotProvider>
+          <ToastProvider>
+            <MotionWrapper>
+              <Router>
+                <FloatingBoxy />
+                <AppRoutes />
+              </Router>
+            </MotionWrapper>
+          </ToastProvider>
+        </MascotProvider>
       </AuthProvider>
     </ThemeProvider>
   );

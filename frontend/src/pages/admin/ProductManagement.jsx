@@ -174,15 +174,17 @@ export default function ProductManagement() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {products.map(product => (
           <motion.div key={product.id} className="rounded-3xl border border-slate-100 p-4" whileHover={{ y: -4 }}>
-            <img
-              src={product.imageUrls?.[0] || '/placeholder.png'}
-              alt={product.name}
-              className="w-full h-48 object-cover rounded mb-2"
-              onError={(e) => {
-                e.target.src = '/placeholder.png';
-                e.target.onerror = null;
-              }}
-            />
+            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl mb-2">
+              <img
+                src={product.imageUrls?.[0] || '/placeholder.png'}
+                alt={product.name}
+                className="w-full h-full object-cover object-center"
+                onError={(e) => {
+                  e.target.src = '/placeholder.png';
+                  e.target.onerror = null;
+                }}
+              />
+            </div>
             <h3 className="font-semibold">{product.name}</h3>
             <p>${product.price} - Stock: {product.stock}</p>
             <div className="mt-1 text-xs">

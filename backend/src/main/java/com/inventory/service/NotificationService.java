@@ -101,9 +101,39 @@ public class NotificationService {
                         notification.setIsRead(false);
                         notificationRepository.save(notification);
                         
-                        // Send email alert
+                        // Send email alert to admin only
                         emailService.sendLowStockAlertEmail(admin.getEmail(), product.getName(), product.getStock());
                     }
+                }
+            }
+        }
+    }
+    
+    @Transactional
+    public void checkAndNotifyLowStock(Product product) {
+        if (product.getStock() < 10) {
+            List<User> adminUsers = userRepository.findAll().stream()
+                    .filter(u -> u.getRole() == User.Role.ADMIN)
+                    .collect(Collectors.toList());
+            
+            for (User admin : adminUsers) {
+                // Check if notification already exists
+                boolean notificationExists = notificationRepository.findByUserOrderByCreatedAtDesc(admin)
+                        .stream()
+                        .anyMatch(n -> n.getMessage().contains("Low stock") && 
+                                     n.getMessage().contains(product.getName()) &&
+                                     !n.getIsRead());
+                
+                if (!notificationExists) {
+                    Notification notification = new Notification();
+                    notification.setUser(admin);
+                    notification.setMessage("Low stock alert: " + product.getName() + " has only " + product.getStock() + " units left");
+                    notification.setType(Notification.NotificationType.LOW_STOCK);
+                    notification.setIsRead(false);
+                    notificationRepository.save(notification);
+                    
+                    // Send email alert to admin only
+                    emailService.sendLowStockAlertEmail(admin.getEmail(), product.getName(), product.getStock());
                 }
             }
         }

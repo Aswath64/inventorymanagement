@@ -15,5 +15,5 @@ public class UpdateProfileRequest {
     
     private String phone;
     private String address;
+    private String avatarUrl; // Added for profile picture upload
 }
-

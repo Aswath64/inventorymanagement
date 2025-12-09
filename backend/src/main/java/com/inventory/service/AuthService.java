@@ -51,13 +51,19 @@ public class AuthService {
             throw new RuntimeException("Email already exists");
         }
         
+        // Only allow CUSTOMER or STAFF roles during registration, not ADMIN
+        User.Role role = request.getRole();
+        if (role == null || role == User.Role.ADMIN) {
+            role = User.Role.CUSTOMER;
+        }
+        
         User user = new User();
         user.setName(request.getName());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setPhone(request.getPhone());
         user.setAddress(request.getAddress());
-        user.setRole(User.Role.CUSTOMER);
+        user.setRole(role);
         user.setEnabled(true);
         
         user = userRepository.save(user);

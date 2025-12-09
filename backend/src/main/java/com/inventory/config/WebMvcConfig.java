@@ -19,6 +19,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
         var parent = absoluteUploadPath.getParent();
         String resourceRoot = (parent != null ? parent : absoluteUploadPath).toString().replace("\\", "/");
         
+        // Serve product images and avatar images
         registry.addResourceHandler("/api/images/**")
                 .addResourceLocations("file:" + resourceRoot + "/");
     }

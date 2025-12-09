@@ -102,16 +102,30 @@ export default function ProductList() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.03 }}
           >
-            <Link to={`/products/${product.id}`} className="gradient-border block rounded-3xl bg-white/80 dark:bg-slate-900/80">
-              <img
-                src={product.imageUrls?.[0] || '/placeholder.png'}
-                alt={product.name}
-                className="h-48 w-full rounded-t-3xl object-cover"
-                onError={(e) => {
-                  e.target.src = '/placeholder.png';
-                  e.target.onerror = null;
-                }}
-              />
+            <Link 
+              to={`/products/${product.id}`} 
+              className="gradient-border block rounded-3xl bg-white/80 dark:bg-slate-900/80 overflow-hidden shadow-sticker hover:shadow-sticker-lg transition-all"
+              onClick={() => {
+                // Sound feedback on product click
+                if (window.soundManager) window.soundManager.playClick();
+              }}
+            >
+              <div className="relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
+                <img
+                  src={product.imageUrls?.[0] || '/placeholder.png'}
+                  alt={product.name}
+                  className="w-full h-full object-cover object-center"
+                  style={{
+                    objectFit: 'cover',
+                    objectPosition: 'center',
+                  }}
+                  loading="lazy"
+                  onError={(e) => {
+                    e.target.src = '/placeholder.png';
+                    e.target.onerror = null;
+                  }}
+                />
+              </div>
               <div className="space-y-1 p-4">
                 <p className="text-sm uppercase tracking-wide text-slate-500">{product.categoryName}</p>
                 <h3 className="text-lg font-semibold">{product.name}</h3>
@@ -119,17 +133,17 @@ export default function ProductList() {
                 <div className="flex items-center justify-between text-sm text-slate-500">
                   <span>Stock: {product.stock}</span>
                   {product.stockStatus === 'OUT_OF_STOCK' && (
-                    <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+                    <span className="rounded-full bg-cartoon-red-100 dark:bg-cartoon-red-900/40 px-3 py-1 text-xs font-bold text-cartoon-red-700 dark:text-cartoon-red-300 border-2 border-cartoon-red-300 dark:border-cartoon-red-700 shadow-sticker">
                       Out of Stock
                     </span>
                   )}
                   {product.stockStatus === 'LOW_STOCK' && product.stockStatus !== 'OUT_OF_STOCK' && (
-                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                    <span className="rounded-full bg-cartoon-yellow-100 dark:bg-cartoon-yellow-900/40 px-3 py-1 text-xs font-bold text-cartoon-yellow-700 dark:text-cartoon-yellow-300 border-2 border-cartoon-yellow-300 dark:border-cartoon-yellow-700 shadow-sticker">
                       Low Stock
                     </span>
                   )}
                   {product.stockStatus === 'IN_STOCK' && (
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                    <span className="rounded-full bg-cartoon-green-100 dark:bg-cartoon-green-900/40 px-3 py-1 text-xs font-bold text-cartoon-green-700 dark:text-cartoon-green-300 border-2 border-cartoon-green-300 dark:border-cartoon-green-700 shadow-sticker">
                       In Stock
                     </span>
                   )}

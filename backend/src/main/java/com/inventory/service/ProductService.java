@@ -27,17 +27,20 @@ public class ProductService {
     private final ProductImageRepository productImageRepository;
     private final ReviewRepository reviewRepository;
     private final FileStorageService fileStorageService;
+    private final NotificationService notificationService;
     
     public ProductService(ProductRepository productRepository,
                          CategoryRepository categoryRepository,
                          ProductImageRepository productImageRepository,
                          ReviewRepository reviewRepository,
-                         FileStorageService fileStorageService) {
+                         FileStorageService fileStorageService,
+                         NotificationService notificationService) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.productImageRepository = productImageRepository;
         this.reviewRepository = reviewRepository;
         this.fileStorageService = fileStorageService;
+        this.notificationService = notificationService;
     }
     
     public Page<ProductDto> getAllProducts(Pageable pageable, Boolean active) {
@@ -83,6 +86,9 @@ public class ProductService {
         
         product = productRepository.save(product);
         
+        // Check for low stock and notify admin/staff
+        notificationService.checkAndNotifyLowStock(product);
+        
         // Save images
         if (images != null && images.length > 0) {
             try {
@@ -120,6 +126,10 @@ public class ProductService {
         }
         
         product = productRepository.save(product);
+        
+        // Check for low stock and notify admin/staff
+        notificationService.checkAndNotifyLowStock(product);
+        
         return toDto(product);
     }
     
